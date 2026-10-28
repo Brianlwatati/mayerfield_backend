@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import router from "./routes";
+import router from "./routes/router";
 
 // If API_PREFIX=/api/v1 and routes.ts contains /auth/login the final endpoint becomes POST /api/v1/auth/login
 const apiprefix = process.env.API_PREFIX || "/api/v1";
