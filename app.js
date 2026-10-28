@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import router from "./routes/router.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 // If API_PREFIX=/api/v1 and routes.ts contains /auth/login the final endpoint becomes POST /api/v1/auth/login
 const apiprefix = process.env.API_PREFIX || "/api/v1";
@@ -39,3 +40,13 @@ app.get("/", (_req, res) => {
 
 /* API routes */
 app.use(apiprefix, router);
+
+// Catch-all for undefined routes (404)
+app.use((req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  error.statusCode = 404;
+  next(error);
+});
+
+// Centralized Error Handler (Must be last!)
+app.use(errorHandler);
