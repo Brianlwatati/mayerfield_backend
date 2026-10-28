@@ -1,8 +1,15 @@
-import { pool } from "../config/db";
+import { pool } from "../config/db.js";
 export class MenuRepository {
-  async listmenu() {
-    const query = "select * from menu_items order by id asc";
-    const { rows } = await pool.query(query);
+  async listmenu(category = "All") {
+    let query = "select * from menu_items";
+    let params = [];
+
+    if (category && category !== "All") {
+      query += " WHERE category = $1";
+      params.push(category);
+    }
+
+    const { rows } = await pool.query(query, params);
     return rows;
   }
   // Fetch a single menu item by its ID
