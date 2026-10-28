@@ -1,5 +1,6 @@
 import { Router } from "express";
 import menurouter from "./menuroutetwo.js";
+import authroute from "./authroute.js";
 const router = Router();
 
 router.get("/", (_req, res) =>
@@ -8,5 +9,6 @@ router.get("/", (_req, res) =>
 
 // Mount the menu routes under the /menu path
 router.use("/menu", menurouter);
+router.use("/auth", authroute);
 
 export default router;

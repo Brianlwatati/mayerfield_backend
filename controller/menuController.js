@@ -28,7 +28,7 @@ export class MenuController {
 
       res.status(200).json({
         success: true,
-        categories, // or keep sending allCategories if the UI needs tabs
+        categories: allCategories, // or keep sending allCategories if the UI needs tabs
         activeCategories, // or keep sending allCategories if the UI needs tabs
         count: menus.length,
         items: menus,
