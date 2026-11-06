@@ -18,7 +18,7 @@ orderRouter.post("/checkout", (req, res, next) =>
 // --- Order Routes ---
 
 // Get all orders (Admin or specific roles can view all; or adjust as needed)
-orderRouter.get("/", authorizeRoles("admin", "usertwo"), (req, res, next) =>
+orderRouter.get("/", authorizeRoles("admin", "customer"), (req, res, next) =>
   orderController.getAllOrders(req, res, next),
 );
 

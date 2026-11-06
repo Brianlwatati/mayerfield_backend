@@ -1,7 +1,9 @@
 import { MenuService } from "../service/menuservice.js";
+import { CategoryService } from "../service/categoryservice.js";
 
 // Instantiate the service
 const menuService = new MenuService();
+const categoryService = new CategoryService();
 
 export class MenuController {
   // GET /api/menus?categoryId=...
@@ -11,11 +13,13 @@ export class MenuController {
 
       // Pass the categoryId filter to your service/repository layer
       const menus = await menuService.getAllMenuItems(categoryId);
+      const categories = await categoryService.getAllCategories();
 
       res.status(200).json({
         success: true,
         count: menus.length,
         items: menus,
+        categories, // return categories as well if needed
       });
     } catch (error) {
       next(error);
