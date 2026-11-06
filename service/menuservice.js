@@ -5,8 +5,8 @@ export class MenuService {
     this.menuRepository = new MenuRepository();
   }
 
-  async getAllMenuItems(category) {
-    const items = await this.menuRepository.listmenu(category);
+  async getAllMenuItems(categoryId) {
+    const items = await this.menuRepository.listmenu(categoryId);
     return items;
   }
 
@@ -22,8 +22,21 @@ export class MenuService {
     return item;
   }
 
+  async getMenuItemsByCategory(categoryId) {
+    const items = await this.menuRepository.getMenuByCategory(categoryId);
+    return items;
+  }
+
   async createMenuItem(itemData) {
-    // You can add validation logic here if needed (e.g. checking required fields)
+    const { name, price, category_id } = itemData;
+    if (!name || price === undefined || !category_id) {
+      const error = new Error(
+        "Missing required fields: name, price, and category_id are required.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
     const newItem = await this.menuRepository.createMenuItem(itemData);
     return newItem;
   }

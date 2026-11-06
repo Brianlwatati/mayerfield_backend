@@ -4,32 +4,16 @@ import { MenuService } from "../service/menuservice.js";
 const menuService = new MenuService();
 
 export class MenuController {
-  // GET /api/menus
+  // GET /api/menus?categoryId=...
   async getAllMenus(req, res, next) {
     try {
-      const { category } = req.query;
+      const { categoryId } = req.query;
 
-      // Pass the category filter to your service/repository layer
-      const menus = await menuService.getAllMenuItems(category);
-
-      const allCategories = [
-        "All",
-        "Hot Coffee",
-        "Cold Drinks",
-        "Bakery",
-        "Tea & Others",
-      ];
-
-      // If you specifically need to filter the categories array:
-      let activeCategories = allCategories;
-      if (category && category !== "All") {
-        activeCategories = allCategories.filter((item) => item === category);
-      }
+      // Pass the categoryId filter to your service/repository layer
+      const menus = await menuService.getAllMenuItems(categoryId);
 
       res.status(200).json({
         success: true,
-        categories: allCategories,
-        activeCategories,
         count: menus.length,
         items: menus,
       });
@@ -47,6 +31,22 @@ export class MenuController {
       res.status(200).json({
         success: true,
         data: menu,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /api/menus/category/:categoryId
+  async getMenusByCategory(req, res, next) {
+    try {
+      const { categoryId } = req.params;
+      const menus = await menuService.getMenuItemsByCategory(categoryId);
+
+      res.status(200).json({
+        success: true,
+        count: menus.length,
+        items: menus,
       });
     } catch (error) {
       next(error);
