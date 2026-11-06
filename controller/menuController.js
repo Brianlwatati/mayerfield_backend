@@ -1,6 +1,6 @@
 import { MenuService } from "../service/menuservice.js";
 
-// Instantiate the service (or inject it depending on your preference)
+// Instantiate the service
 const menuService = new MenuService();
 
 export class MenuController {
@@ -28,8 +28,8 @@ export class MenuController {
 
       res.status(200).json({
         success: true,
-        categories: allCategories, // or keep sending allCategories if the UI needs tabs
-        activeCategories, // or keep sending allCategories if the UI needs tabs
+        categories: allCategories,
+        activeCategories,
         count: menus.length,
         items: menus,
       });
@@ -49,7 +49,53 @@ export class MenuController {
         data: menu,
       });
     } catch (error) {
-      next(error); // Catches 404s or DB errors and sends them to your error handler
+      next(error);
+    }
+  }
+
+  // POST /api/menus
+  async createMenuItem(req, res, next) {
+    try {
+      const newItem = await menuService.createMenuItem(req.body);
+
+      res.status(201).json({
+        success: true,
+        message: "Menu item created successfully",
+        data: newItem,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // PUT /api/menus/:id
+  async updateMenuItem(req, res, next) {
+    try {
+      const { id } = req.params;
+      const updatedItem = await menuService.updateMenuItem(id, req.body);
+
+      res.status(200).json({
+        success: true,
+        message: "Menu item updated successfully",
+        data: updatedItem,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // DELETE /api/menus/:id
+  async deleteMenuItem(req, res, next) {
+    try {
+      const { id } = req.params;
+      await menuService.deleteMenuItem(id);
+
+      res.status(200).json({
+        success: true,
+        message: "Menu item deleted successfully",
+      });
+    } catch (error) {
+      next(error);
     }
   }
 }

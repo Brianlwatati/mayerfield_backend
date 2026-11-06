@@ -1,9 +1,10 @@
 -- Users Table for Authentication (using UUID)
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
+  user_name VARCHAR(255) NOT NULL,
+  user_role VARCHAR(40) NOT NULL DEFAULT 'user' CHECK (user_role IN ('user','admin', 'usertwo')),
+  user_email VARCHAR(255) UNIQUE NOT NULL,
+  user_password VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -17,6 +18,27 @@ CREATE TABLE IF NOT EXISTS menu_items (
   image TEXT,
   is_popular BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Orders Table
+CREATE TABLE orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR(36) NOT NULL,
+  total_amount DECIMAL(10, 2) NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'paid', 'failed'
+  stripe_session_id VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Order Items Table
+CREATE TABLE order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id VARCHAR(36) NOT NULL,
+  item_id VARCHAR(36) NOT NULL,
+  quantity INT NOT NULL,
+  price_at_purchase DECIMAL(10, 2) NOT NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 -- Seed Initial Menu Items (UUIDs will be auto-generated)
