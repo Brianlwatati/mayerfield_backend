@@ -16,16 +16,17 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Menu Items Table (using UUID)
+-- Menu Items Table (updated to reference categories table via category_id)
 CREATE TABLE IF NOT EXISTS menu_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
   price DECIMAL(10, 2) NOT NULL,
-  category VARCHAR(100) NOT NULL,
+  category_id UUID NOT NULL,
   image TEXT,
   is_popular BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
 );
 
 -- Orders Table
@@ -50,9 +51,22 @@ CREATE TABLE IF NOT EXISTS order_items (
   FOREIGN KEY (item_id) REFERENCES menu_items(id)
 );
 
--- Seed Initial Menu Items without duplicating them when the migration is rerun.
-INSERT INTO menu_items (name, description, price, category, image, is_popular)
-SELECT seed.name, seed.description, seed.price, seed.category, seed.image, seed.is_popular
+-- 1. Seed Initial Categories without duplicating when rerun
+INSERT INTO categories (name, description)
+SELECT seed.name, seed.description
+FROM (VALUES
+  ('Hot Coffee', 'Freshly brewed hot espresso and coffee beverages'),
+  ('Cold Drinks', 'Chilled refreshing beverages and iced teas'),
+  ('Bakery', 'Freshly baked pastries, muffins, and croissants'),
+  ('Tea & Others', 'Aromatic teas and specialty non-coffee drinks')
+) AS seed(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM categories existing WHERE existing.name = seed.name
+);
+
+-- 2. Seed Initial Menu Items dynamically linking to their respective category UUIDs
+INSERT INTO menu_items (name, description, price, category_id, image, is_popular)
+SELECT seed.name, seed.description, seed.price, c.id, seed.image, seed.is_popular
 FROM (VALUES
   ('Classic Espresso', 'Rich and bold double shot extracted from our signature roasted beans.', 3.50, 'Hot Coffee', 'https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&q=80&w=600', TRUE),
   ('Caramel Macchiato', 'Freshly steamed milk with vanilla-flavored syrup, marked with espresso and caramel drip.', 4.85, 'Hot Coffee', 'https://images.unsplash.com/photo-1485808191679-5f86510681a2?auto=format&fit=crop&q=80&w=600', TRUE),
@@ -62,9 +76,10 @@ FROM (VALUES
   ('Blueberry Muffin', 'Moist muffin packed with wild organic blueberries and topped with streusel.', 3.95, 'Bakery', 'https://images.unsplash.com/photo-1607958996333-41aef7caefaa?auto=format&fit=crop&q=80&w=600', FALSE),
   ('Chai Tea Latte', 'Black tea infused with cinnamon, clove, and sweet aromatic spices with steamed milk.', 4.25, 'Tea & Others', 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=600', FALSE),
   ('Iced Peach Hibiscus Tea', 'Refreshing herbal tea shaken with sweet peach puree and ice.', 4.00, 'Tea & Others', 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&q=80&w=600', FALSE)
-) AS seed(name, description, price, category, image, is_popular)
+) AS seed(name, description, price, category_name, image, is_popular)
+JOIN categories c ON c.name = seed.category_name
 WHERE NOT EXISTS (
   SELECT 1
   FROM menu_items existing
-  WHERE existing.name = seed.name AND existing.category = seed.category
+  WHERE existing.name = seed.name AND existing.category_id = c.id
 );
