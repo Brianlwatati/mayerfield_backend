@@ -1,10 +1,61 @@
 import { OrderRepository } from "../repository/ordersrepository.js";
 import { OrderItemRepository } from "../repository/ordersitemsrepository.js";
+import { stripe } from "../config/stripe.js";
 
 export class OrderService {
   constructor() {
     this.orderRepository = new OrderRepository();
     this.orderItemRepository = new OrderItemRepository();
+  }
+
+  // Create order & generate Stripe Checkout Session
+  async createStripeCheckoutOrder(userData, items) {
+    if (!items || items.length === 0) {
+      const error = new Error("Cannot create an order without items");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 1. Calculate total amount or map items for Stripe line items
+    let totalAmount = 0;
+    const lineItems = items.map((item) => {
+      totalAmount += item.price_at_purchase * item.quantity;
+      return {
+        price_data: {
+          currency: "eur", // matches your EUR balance currency in the dashboard
+          product_data: {
+            name: item.name || "Menu Item",
+          },
+          unit_amount: Math.round(item.price_at_purchase * 100), // Stripe expects amounts in cents
+        },
+        quantity: item.quantity,
+      };
+    });
+
+    // 2. Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: lineItems,
+      mode: "payment",
+      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+    });
+
+    // 3. Save order to database with 'pending' status and stripe_session_id
+    const orderData = {
+      user_id: userData.user_id,
+      total_amount: totalAmount,
+      status: "pending",
+      stripe_session_id: session.id,
+    };
+
+    const newOrder = await this.orderRepository.createOrder(orderData, items);
+
+    // Return both the order details and the Stripe checkout URL for the frontend redirection
+    return {
+      order: newOrder,
+      url: session.url,
+    };
   }
 
   // Get all orders (useful for admin dashboards)

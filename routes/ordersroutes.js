@@ -10,6 +10,11 @@ const orderItemController = new OrderItemController();
 // All order routes require authentication
 orderRouter.use(authenticateUser);
 
+// Create Stripe checkout session route
+orderRouter.post("/checkout", (req, res, next) =>
+  orderController.createCheckoutSession(req, res, next),
+);
+
 // --- Order Routes ---
 
 // Get all orders (Admin or specific roles can view all; or adjust as needed)

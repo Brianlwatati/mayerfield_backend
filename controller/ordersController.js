@@ -3,6 +3,29 @@ import { OrderService } from "../service/ordersevice.js";
 const orderService = new OrderService();
 
 export class OrderController {
+  // POST /api/orders/checkout
+  async createCheckoutSession(req, res, next) {
+    try {
+      // req.user comes from your authenticateUser middleware (contains user id)
+      const userData = { user_id: req.user.id };
+      const { items } = req.body; // Array of items with item_id, quantity, price_at_purchase, name
+
+      const checkoutData = await orderService.createStripeCheckoutOrder(
+        userData,
+        items,
+      );
+
+      res.status(201).json({
+        success: true,
+        message: "Stripe checkout session created successfully",
+        data: checkoutData.order,
+        url: checkoutData.url, // Frontend redirects user to this URL
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // GET /api/orders
   async getAllOrders(req, res, next) {
     try {
