@@ -38,10 +38,10 @@ REST API for the Mayerfield BrewHaus application. The service provides user regi
 3. Create the database tables and add the sample menu:
 
    ```sh
-   psql "$DATABASE_URL" -f db/schema.sql
+   npm run migrate
    ```
 
-   Run the schema against the target database once to initialize it. The schema creates the `users` and `menu_items` tables and inserts sample menu rows.
+   The migration reads `config/schema.sql` and runs it in a transaction. It can be rerun safely; existing tables are preserved and sample menu items are not duplicated.
 
 4. Start the API:
 
@@ -124,20 +124,23 @@ The menu list response has this shape:
 
 ## Database
 
-The SQL schema in [`db/schema.sql`](db/schema.sql) defines:
+The SQL schema in [`config/schema.sql`](config/schema.sql) defines:
 
-- `users`: UUID, name, unique email, hashed password, and creation timestamp.
+- `users`: UUID, name, role, unique email, hashed password, and creation timestamp.
 - `menu_items`: UUID, name, description, price, category, image URL, popularity flag, and creation timestamp.
+- `orders` and `order_items`: UUID-backed order records with foreign keys to users and menu items.
 
-The PostgreSQL connection pool is configured in [`db/db.js`](db/db.js) using `DATABASE_URL`.
+The PostgreSQL connection pool is configured in [`config/db.js`](config/db.js) using `DATABASE_URL`.
 
 ## Project layout
 
 ```text
 .
-├── db/
+├── config/
 │   ├── db.js
 │   └── schema.sql
+├── scripts/
+│   └── migrate.js
 ├── middleware/
 │   └── auth.js
 ├── routes/
@@ -153,6 +156,7 @@ The PostgreSQL connection pool is configured in [`db/db.js`](db/db.js) using `DA
 | --- | --- |
 | `npm run dev` | Start the server for development. |
 | `npm start` | Start the server. |
+| `npm run migrate` | Apply the database schema and seed sample menu items. |
 | `npm test` | No automated test suite is configured yet; this script currently exits with an error. |
 
 ## Notes
