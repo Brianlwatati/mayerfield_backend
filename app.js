@@ -22,6 +22,7 @@ app.use(
   }),
 );
 
+app.use(`${apiprefix}/webhooks`, webhookRouter);
 app.use(`${apiprefix}/webhook`, webhookRouter);
 app.use(express.json());
 

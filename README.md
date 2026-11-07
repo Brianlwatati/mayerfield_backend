@@ -131,12 +131,15 @@ The menu list response has this shape:
 | `POST` | `/api/v1/orders/checkout` | Authenticated | Create a pending order and Stripe Checkout session. |
 | `GET` | `/api/v1/orders/verify-payment?session_id=...` | Authenticated | Verify the caller's Checkout session payment status. |
 
-Configure a Stripe webhook endpoint at `/api/v1/webhook/stripe` (or
-`<API_PREFIX>/webhook/stripe` when `API_PREFIX` is customized) and subscribe to
-`checkout.session.completed` and `checkout.session.async_payment_succeeded`.
-Set `STRIPE_WEBHOOK_SECRET` to that endpoint's signing secret. For local testing,
-forward Stripe CLI events to `http://localhost:4000/api/v1/webhook/stripe` and
-use the signing secret printed by `stripe listen`.
+Configure a Stripe webhook endpoint at `/api/v1/webhooks/stripe` (or
+`<API_PREFIX>/webhooks/stripe` when `API_PREFIX` is customized) and subscribe
+to `checkout.session.completed` and
+`checkout.session.async_payment_succeeded`. The singular
+`/api/v1/webhook/stripe` path remains supported as an alias. Set
+`STRIPE_WEBHOOK_SECRET` to that endpoint's signing secret. For local testing,
+forward Stripe CLI events to
+`http://localhost:4000/api/v1/webhooks/stripe` and use the signing secret
+printed by `stripe listen`.
 
 ## Database
 
