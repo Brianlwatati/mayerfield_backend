@@ -16,44 +16,51 @@ export class OrderService {
       throw error;
     }
 
-    // 1. Calculate total amount or map items for Stripe line items
+    // 1. Calculate total amount
     let totalAmount = 0;
     const lineItems = items.map((item) => {
       totalAmount += item.price_at_purchase * item.quantity;
       return {
         price_data: {
-          currency: "eur", // matches your EUR balance currency in the dashboard
+          currency: "eur",
           product_data: {
             name: item.name || "Menu Item",
           },
-          unit_amount: Math.round(item.price_at_purchase * 100), // Stripe expects amounts in cents
+          unit_amount: Math.round(item.price_at_purchase * 100),
         },
         quantity: item.quantity,
       };
     });
 
-    // 2. Create Stripe Checkout Session
+    // 2. Save order to database FIRST with 'pending' status to get an ID
+    const orderData = {
+      user_id: userData.user_id,
+      total_amount: totalAmount,
+      status: "pending",
+    };
+
+    const newOrder = await this.orderRepository.createOrder(orderData, items);
+
+    // Make sure frontendBaseUrl is defined (e.g. from process.env.FRONTEND_URL)
+    const frontendBaseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+
+    // 3. Create Stripe Checkout Session using the newly created order's ID
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      // Pass metadata to payment_intent_data so payment_intent.succeeded can read it
+      client_reference_id: newOrder.id.toString(),
       payment_intent_data: {
-        metadata: { order_id: createdOrder.id },
+        metadata: { order_id: newOrder.id.toString() },
       },
       success_url: `${frontendBaseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendBaseUrl}/cancel`,
     });
 
-    // 3. Save order to database with 'pending' status and stripe_session_id
-    const orderData = {
-      user_id: userData.user_id,
-      total_amount: totalAmount,
-      status: "pending",
-      stripe_session_id: session.id,
-    };
-
-    const newOrder = await this.orderRepository.createOrder(orderData, items);
+    // 4. (Optional) Update the order with the stripe_session_id if your repository supports it
+    if (this.orderRepository.updateStripeSessionId) {
+      await this.orderRepository.updateStripeSessionId(newOrder.id, session.id);
+    }
 
     // Return both the order details and the Stripe checkout URL for the frontend redirection
     return {
