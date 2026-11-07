@@ -46,7 +46,6 @@ export class OrderService {
 
     // 3. Create Stripe Checkout Session using the newly created order's ID
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
       client_reference_id: newOrder.id.toString(),
