@@ -128,6 +128,15 @@ The menu list response has this shape:
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/orders` | Public; optional token | Return the caller's orders, or all orders for an admin. Anonymous requests return an empty list. |
 | `GET` | `/api/v1/orders/:id` | Public; optional token | Return an order if it belongs to the caller, or any order for an admin. Anonymous or unauthorized requests return not found. |
+| `POST` | `/api/v1/orders/checkout` | Authenticated | Create a pending order and Stripe Checkout session. |
+| `GET` | `/api/v1/orders/verify-payment?session_id=...` | Authenticated | Verify the caller's Checkout session payment status. |
+
+Configure a Stripe webhook endpoint at `/api/v1/webhook/stripe` (or
+`<API_PREFIX>/webhook/stripe` when `API_PREFIX` is customized) and subscribe to
+`checkout.session.completed` and `checkout.session.async_payment_succeeded`.
+Set `STRIPE_WEBHOOK_SECRET` to that endpoint's signing secret. For local testing,
+forward Stripe CLI events to `http://localhost:4000/api/v1/webhook/stripe` and
+use the signing secret printed by `stripe listen`.
 
 ## Database
 

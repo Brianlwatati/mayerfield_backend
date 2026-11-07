@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import router from "./routes/router.js";
+import webhookRouter from "./routes/webhookstripe.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 // If API_PREFIX=/api/v1 and routes.ts contains /auth/login the final endpoint becomes POST /api/v1/auth/login
@@ -21,6 +22,7 @@ app.use(
   }),
 );
 
+app.use(`${apiprefix}/webhook`, webhookRouter);
 app.use(express.json());
 
 app.get("/health", (_req, res) => {

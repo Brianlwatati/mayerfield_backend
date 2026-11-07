@@ -57,10 +57,11 @@ export class OrderService {
       cancel_url: `${frontendBaseUrl}/cancel`,
     });
 
-    // 4. (Optional) Update the order with the stripe_session_id if your repository supports it
-    if (this.orderRepository.updateStripeSessionId) {
-      await this.orderRepository.updateStripeSessionId(newOrder.id, session.id);
-    }
+    await this.orderRepository.updateOrderStatus(
+      newOrder.id,
+      "pending",
+      session.id,
+    );
 
     // Return both the order details and the Stripe checkout URL for the frontend redirection
     return {
@@ -137,30 +138,38 @@ export class OrderService {
     return updatedOrder;
   }
 
-  async verifyAndUpdatePayment(sessionId) {
+  async verifyAndUpdatePayment(sessionId, user) {
     if (!sessionId) {
-      throw new Error("Session ID is required.");
+      const error = new Error("Session ID is required.");
+      error.statusCode = 400;
+      throw error;
     }
 
-    // Retrieve session directly from Stripe API
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const orderId = session.client_reference_id || session.metadata?.order_id;
 
-    if (session.payment_status === "paid") {
-      const orderId = session.client_reference_id || session.metadata?.order_id;
+    if (!orderId) {
+      const error = new Error("Order not found");
+      error.statusCode = 404;
+      throw error;
+    }
 
-      if (!orderId) {
-        throw new Error("Order ID reference not found in Stripe session.");
-      }
+    const order = await this.orderRepository.getOrderById(orderId, user.id);
+    if (!order || order.stripe_session_id !== session.id) {
+      const error = new Error("Order not found");
+      error.statusCode = 404;
+      throw error;
+    }
 
-      // Update status in PostgreSQL
-      const updatedOrder = await orderRepository.updateOrderStatus(
+    if (session.payment_status === "paid" && order.status !== "paid") {
+      await this.orderRepository.updateOrderStatus(
         orderId,
         "paid",
+        session.id,
       );
-      return { success: true, status: "paid", order: updatedOrder };
     }
 
-    return { success: false, status: session.payment_status };
+    return { success: true, status: session.payment_status };
   }
 
   // Delete an order

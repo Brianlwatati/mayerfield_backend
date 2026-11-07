@@ -4,7 +4,6 @@ import orderRouter from "./ordersroutes.js";
 import orderItemRouter from "./ordersitemsroutes.js";
 import categoryRouter from "./categoryroutes.js";
 import authroute from "./authroute.js";
-import webhookRouter from "./webhookstripe.js"; // Import the webhook route
 const router = Router();
 
 router.get("/", (_req, res) =>
@@ -16,6 +15,5 @@ router.use("/menu", menurouter);
 router.use("/orders", orderRouter);
 router.use("/order-items", orderItemRouter);
 router.use("/auth", authroute);
-router.use("/webhook", webhookRouter);
 
 export default router;

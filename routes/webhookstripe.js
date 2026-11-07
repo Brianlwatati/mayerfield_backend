@@ -1,18 +1,22 @@
-// routes/webhook.js or directly in server.js
 import express from "express";
-import Stripe from "stripe";
+import { stripe } from "../config/stripe.js";
+import { OrderRepository } from "../repository/ordersrepository.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const webhookRouter = express.Router();
+const orderRepository = new OrderRepository();
 
 webhookRouter.post(
   "/stripe",
-  express.raw({ type: "application/json" }), // Crucial: Raw buffer for signature verification
+  express.raw({ type: "application/json" }),
   async (req, res) => {
     const sig = req.headers["stripe-signature"];
     let event;
 
     try {
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
+      }
+
       event = stripe.webhooks.constructEvent(
         req.body,
         sig,
@@ -23,34 +27,42 @@ webhookRouter.post(
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // Handle the checkout.session.completed event
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
+    try {
+      if (
+        event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded" ||
+        event.type === "payment_intent.succeeded"
+      ) {
+        const session = event.data.object;
+        if (session.payment_status === "paid") {
+          const orderId =
+            session.client_reference_id || session.metadata?.order_id;
 
-      // Extract client_reference_id or metadata where order ID is stored
-      const orderId = session.client_reference_id || session.metadata?.order_id;
+          if (!orderId) {
+            console.error(
+              `Stripe session ${session.id} is missing its order reference`,
+            );
+            return res
+              .status(400)
+              .send("Stripe session has no order reference");
+          }
 
-      if (orderId) {
-        // Update database status to 'paid'
-        await db.query("UPDATE orders SET status = 'paid' WHERE id = $1", [
-          orderId,
-        ]);
-        console.log(`Order ${orderId} updated to PAID`);
+          const order = await orderRepository.updateOrderStatus(
+            orderId,
+            "paid",
+            session.id,
+          );
+          if (!order) {
+            console.error(
+              `No order found for Stripe session ${session.id} (order ${orderId})`,
+            );
+            return res.status(500).send("Order was not updated");
+          }
+        }
       }
-    }
-
-    if (event.type === "payment_intent.succeeded") {
-      const paymentIntent = event.data.object;
-
-      // Extract order ID from payment intent metadata
-      const orderId = paymentIntent.metadata?.order_id;
-
-      if (orderId) {
-        await db.query("UPDATE orders SET status = 'paid' WHERE id = $1", [
-          orderId,
-        ]);
-        console.log(`Order ${orderId} updated to PAID via PaymentIntent`);
-      }
+    } catch (error) {
+      console.error("Stripe webhook processing failed:", error);
+      return res.status(500).send("Webhook processing failed");
     }
 
     res.json({ received: true });

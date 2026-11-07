@@ -14,17 +14,6 @@ export class OrderRepository {
     return rows;
   }
 
-  async updateOrderStatus(orderId, status) {
-    const query = `
-    UPDATE orders 
-    SET status = $1, updated_at = NOW() 
-    WHERE id = $2 
-    RETURNING *;
-  `;
-    const { rows } = await db.query(query, [status, orderId]);
-    return rows[0];
-  }
-
   async getOrderById(id, userId) {
     const userFilter = userId ? "AND o.user_id = $2" : "";
     const orderQuery = `

@@ -23,6 +23,12 @@ orderRouter.get("/", optionalAuthenticateUser, (req, res, next) =>
   orderController.getAllOrders(req, res, next),
 );
 
+orderRouter.get(
+  "/verify-payment",
+  authenticateUser,
+  (req, res, next) => orderController.verifyPayment(req, res, next),
+);
+
 // Get a single order by ID
 orderRouter.get("/:id", optionalAuthenticateUser, (req, res, next) =>
   orderController.getOrderById(req, res, next),
@@ -31,12 +37,6 @@ orderRouter.get("/:id", optionalAuthenticateUser, (req, res, next) =>
 // Create a new order (Authenticated users can checkout/place orders)
 orderRouter.post("/", authenticateUser, (req, res, next) =>
   orderController.createOrder(req, res, next),
-);
-
-orderRouter.get(
-  "/verify-payment",
-  authenticateUser,
-  orderController.verifyPayment,
 );
 
 // Update order status (e.g., payment success/failure or admin status change)
