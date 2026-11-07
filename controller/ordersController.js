@@ -29,7 +29,7 @@ export class OrderController {
   // GET /api/orders
   async getAllOrders(req, res, next) {
     try {
-      const orders = await orderService.getAllOrders();
+      const orders = await orderService.getAllOrders(req.user);
 
       res.status(200).json({
         success: true,
@@ -45,7 +45,7 @@ export class OrderController {
   async getOrderById(req, res, next) {
     try {
       const { id } = req.params;
-      const order = await orderService.getOrderById(id);
+      const order = await orderService.getOrderById(id, req.user);
 
       res.status(200).json({
         success: true,
@@ -53,6 +53,22 @@ export class OrderController {
       });
     } catch (error) {
       next(error);
+    }
+  }
+
+  // GET /api/orders/verify-payment
+  async verifyPayment(req, res) {
+    try {
+      const { session_id } = req.query;
+      const result = await orderService.verifyAndUpdatePayment(session_id);
+
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error("Payment Verification Error:", err.message);
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Failed to verify payment status.",
+      });
     }
   }
 

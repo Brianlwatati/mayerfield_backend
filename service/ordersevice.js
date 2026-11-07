@@ -37,8 +37,12 @@ export class OrderService {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+      // Pass metadata to payment_intent_data so payment_intent.succeeded can read it
+      payment_intent_data: {
+        metadata: { order_id: createdOrder.id },
+      },
+      success_url: `${frontendBaseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendBaseUrl}/cancel`,
     });
 
     // 3. Save order to database with 'pending' status and stripe_session_id
@@ -58,14 +62,33 @@ export class OrderService {
     };
   }
 
-  // Get all orders (useful for admin dashboards)
-  async getAllOrders() {
-    return await this.orderRepository.listOrders();
+  // Admins can view all orders; other callers can only view their own.
+  async getAllOrders(user) {
+    if (!user) {
+      return [];
+    }
+
+    if (user.user_role === "admin") {
+      return await this.orderRepository.listOrders();
+    }
+
+    if (!user.id) {
+      return [];
+    }
+
+    return await this.orderRepository.listOrders(user.id);
   }
 
   // Get a specific order by ID along with its items
-  async getOrderById(id) {
-    const order = await this.orderRepository.getOrderById(id);
+  async getOrderById(id, user) {
+    if (!user || (!user.id && user.user_role !== "admin")) {
+      const error = new Error("Order not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const userId = user.user_role === "admin" ? undefined : user.id;
+    const order = await this.orderRepository.getOrderById(id, userId);
 
     if (!order) {
       const error = new Error("Order not found");
@@ -105,6 +128,32 @@ export class OrderService {
     }
 
     return updatedOrder;
+  }
+
+  async verifyAndUpdatePayment(sessionId) {
+    if (!sessionId) {
+      throw new Error("Session ID is required.");
+    }
+
+    // Retrieve session directly from Stripe API
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === "paid") {
+      const orderId = session.client_reference_id || session.metadata?.order_id;
+
+      if (!orderId) {
+        throw new Error("Order ID reference not found in Stripe session.");
+      }
+
+      // Update status in PostgreSQL
+      const updatedOrder = await orderRepository.updateOrderStatus(
+        orderId,
+        "paid",
+      );
+      return { success: true, status: "paid", order: updatedOrder };
+    }
+
+    return { success: false, status: session.payment_status };
   }
 
   // Delete an order

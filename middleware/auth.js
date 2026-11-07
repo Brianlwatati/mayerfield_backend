@@ -35,6 +35,14 @@ export const authenticateUser = (req, res, next) => {
   }
 };
 
+export const optionalAuthenticateUser = (req, res, next) => {
+  if (!req.headers.authorization) {
+    return next();
+  }
+
+  return authenticateUser(req, res, next);
+};
+
 /**
  * Middleware factory to authorize specific user roles.
  * Example usage: authorizeRoles('admin', 'usertwo')

@@ -1,34 +1,52 @@
 import { pool } from "../config/db.js";
 
 export class OrderRepository {
-  async listOrders() {
+  async listOrders(userId) {
+    const userFilter = userId ? "WHERE o.user_id = $1" : "";
     const query = `
       SELECT o.*, u.user_name, u.user_email 
       FROM orders o
       JOIN users u ON o.user_id = u.id
+      ${userFilter}
       ORDER BY o.created_at DESC;
     `;
-    const { rows } = await pool.query(query);
+    const { rows } = await pool.query(query, userId ? [userId] : []);
     return rows;
   }
 
-  async getOrderById(id) {
+  async updateOrderStatus(orderId, status) {
+    const query = `
+    UPDATE orders 
+    SET status = $1, updated_at = NOW() 
+    WHERE id = $2 
+    RETURNING *;
+  `;
+    const { rows } = await db.query(query, [status, orderId]);
+    return rows[0];
+  }
+
+  async getOrderById(id, userId) {
+    const userFilter = userId ? "AND o.user_id = $2" : "";
     const orderQuery = `
       SELECT o.*, u.user_name, u.user_email 
       FROM orders o
       JOIN users u ON o.user_id = u.id
-      WHERE o.id = $1;
+      WHERE o.id = $1 ${userFilter};
     `;
     const itemsQuery = `
-      SELECT oi.*, mi.name, mi.image, mi.category 
+      SELECT oi.*, mi.name, mi.image, c.name AS category_name
       FROM order_items oi
       JOIN menu_items mi ON oi.item_id = mi.id
+      JOIN categories c ON mi.category_id = c.id
       WHERE oi.order_id = $1;
     `;
 
     const client = await pool.connect();
     try {
-      const orderResult = await client.query(orderQuery, [id]);
+      const orderResult = await client.query(
+        orderQuery,
+        userId ? [id, userId] : [id],
+      );
       if (orderResult.rows.length === 0) return null;
 
       const itemsResult = await client.query(itemsQuery, [id]);

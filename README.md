@@ -122,6 +122,13 @@ The menu list response has this shape:
 }
 ```
 
+### Orders
+
+| Method | Endpoint | Access | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/orders` | Public; optional token | Return the caller's orders, or all orders for an admin. Anonymous requests return an empty list. |
+| `GET` | `/api/v1/orders/:id` | Public; optional token | Return an order if it belongs to the caller, or any order for an admin. Anonymous or unauthorized requests return not found. |
+
 ## Database
 
 The SQL schema in [`config/schema.sql`](config/schema.sql) defines:
