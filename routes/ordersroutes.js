@@ -35,7 +35,7 @@ orderRouter.post("/", authenticateUser, (req, res, next) =>
 
 orderRouter.get(
   "/verify-payment",
-  authenticateToken,
+  authenticateUser,
   orderController.verifyPayment,
 );
 
